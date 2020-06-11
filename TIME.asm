@@ -6,15 +6,16 @@ month: .asciiz "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Noc Dec "
 endline: .ascii "\r\n"
 .text
 _main:
-	li $a0, 1
-	li $a1, 7
+	li $a0, 13
+	li $a1, 12
 	li $a2, 2000
 	la $a3, TIME
 	jal _Date
 	la $a0, ($v0)
-	jal _LeapYear
-	add $a0, $v0, $zero
-	li $v0, 1
+	li $a1, 1
+	jal _Convert
+	la $a0, ($v0)
+	li $v0, 4
 	syscall
 	li $v0, 10
 	syscall
@@ -105,14 +106,6 @@ Date.L2:				#call _NumToString to write day to buffer
 	lw $a1, 4($sp)
 	lw $ra, 8($sp)
 	addi $sp, $sp, 12
-	
-	li $v0, 4			#print result
-	add $t0, $a0, $zero
-	la $a0, ($a3)
-	syscall
-	la $a0, endline
-	syscall
-	add $a0, $t0, $zero
 	la $v0, ($a3)
 	jr $ra
 
@@ -131,14 +124,14 @@ Convert.outcopy:
 	la $t0, mystring
 Convert.case0:
 	bne $a1, $zero, Convert.case1
-	lb $t1, 0($t0)
-	sb $t1, 3($a0)
-	lb $t1, 1($t0)
-	sb $t1, 4($a0)
-	lb $t1, 3($t0)
-	sb $t1, 0($a0)
-	lb $t1, 4($t0)
-	sb $t1, 1($a0)
+	lb $t1, 0($a0)
+	sb $t1, 3($t0)
+	lb $t1, 1($a0)
+	sb $t1, 4($t0)
+	lb $t1, 3($a0)
+	sb $t1, 0($t0)
+	lb $t1, 4($a0)
+	sb $t1, 1($t0)
 	j Convert.out
 Convert.case1:
 	li $t1, 1
@@ -152,36 +145,33 @@ Convert.case1:
 	sw $ra, 8($sp)
 	sw $a1, 4($sp)
 	sw $a0, 0($sp)
-	la $a1, ($a0)
+	la $a1, ($t0)
 	add $a0, $v0, $zero
 	jal _WriteMonthToString
 	lw $a0, 0($sp)
 	lw $a1, 4($sp)
 	lw $ra, 8($sp)
 	addi $sp, $sp, 12
-	lb $t1, 0($t0)
-	sb $t1, 4($a0)
-	lb $t1, 1($t0)
-	sb $t1, 5($a0)
+	lb $t1, 0($a0)
+	sb $t1, 4($t0)
+	lb $t1, 1($a0)
+	sb $t1, 5($t0)
 	j Convert.outcase
 Convert.case2:
 	li $t1, 2
 	bne $a1, $t1, Convert.out
 	li $t1, ' '
-	sb $t1, 2($a0)
-	addi $sp, $sp, -8
-	sw $ra, 4($sp)
-	sw $a0, 0($sp)
-	la $a0, ($t0)
+	sb $t1, 2($t0)
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
 	jal _Month
-	lw $ra, 4($sp)
-	lw $a0, 0($sp)
-	addi $sp, $sp, 8
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
 	addi $sp, $sp, -12
 	sw $ra, 8($sp)
 	sw $a1, 4($sp)
 	sw $a0, 0($sp)
-	la $a1, 3($a0)
+	la $a1, 3($t0)
 	add $a0, $v0, $zero
 	jal _WriteMonthToString
 	lw $ra, 8($sp)
@@ -191,15 +181,15 @@ Convert.case2:
 	j Convert.outcase
 Convert.outcase:
 	li $t1, ','
-	sb $t1, 6($a0)
+	sb $t1, 6($t0)
 	li $t1, ' '
-	sb $t1, 7($a0)
-	lh $t1, 6($t0)
-	sh $t1, 8($a0)
-	lh $t1, 8($t0)
-	sh $t1, 10($a0)
+	sb $t1, 7($t0)
+	lh $t1, 6($a0)
+	sh $t1, 8($t0)
+	lh $t1, 8($a0)
+	sh $t1, 10($t0)
 Convert.out:
-	la $v0, ($a0)
+	la $v0, ($t0)
 	jr $ra
 
 _WriteMonthToString: #	$a0: value of month 1-12	$a1: buffer to write to		$v0: address of final string
@@ -287,4 +277,3 @@ LeapYear.L1:
 	li $v0, 1
 LeapYear.L2:
 	jr $ra
-	
