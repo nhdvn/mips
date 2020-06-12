@@ -9,13 +9,13 @@ endline: .ascii "\r\n"
 _main:
 
 	li $a0, 29
-	li $a1, 3
+	li $a1, 2
 	li $a2, 2000
 	la $a3, TIME
 	jal _Date
 
-	li $a0, 28	
-	li $a1, 3
+	li $a0, 28
+	li $a1, 2
 	li $a2, 2001
 	la $a3, TIME1
 	jal _Date
@@ -94,19 +94,19 @@ _GetTime: # $a0: address of string TIME	$a1: address ò string TIME1		$V0: interg
 
 	
 #Procedure to write a number into a string buffer
-_NumToString:	#Positive number only	$a0: num	$a1:buffer
+_NumToString:	#Unsigned number only	$a0: num	$a1:buffer
 	addi $t0, $0, 10	#t0 = 10
 	addi $t8, $a0, 0	#t8 : quotient
 	addi $t9, $0, 0		#t9: remainder
 	addi $t1, $zero, 0	#counter = 0
 	NumToString.loop:
-		beqz $t8, NumToString.write	#quotient = 0 then out loop and write
 		addi $t1, $t1, 1		#counter++
 		div $t8, $t0			
 		mflo $t8
 		mfhi $t9
 		addi $sp, $sp, -4
 		sw $t9, 0($sp)			#store remainder into stack
+		beq $t8, $zero, NumToString.write	#quotient = 0 then out loop and write
 		j NumToString.loop
 	NumToString.write:	#write counter characters from stack
 		la $t3, ($a1)
@@ -168,6 +168,23 @@ Date.L2:				#call _NumToString to write day to buffer
 	li $t3, 47			#write '/'
 	sb $t3, 5($a3)
 	la $s0, 6($a3)
+	li $t0, 1000
+	li $t2, 48
+	slt $t1, $a2, $t0
+	beq $t1, $zero, Date.L3
+	sb $t2, 0($s0)
+	addi $s0, $s0, 1
+	li $t0, 100
+	slt $t1, $a2, $t0
+	beq $t1, $zero, Date.L3
+	sb $t2, 0($s0)
+	addi $s0, $s0, 1
+	li $t0, 10
+	slt $t1, $a2, $t0
+	beq $t1, $zero, Date.L3
+	sb $t2, 0($s0)
+	addi $s0, $s0, 1
+Date.L3:	
 	addi $sp, $sp, -12		#call _NumToString to write year
 	sw $ra, 8($sp)
 	sw $a1, 4($sp)
