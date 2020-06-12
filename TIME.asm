@@ -1,24 +1,97 @@
 .data
 mystring: .space 1024
 TIME: .space 1024
+TIME1: .space 1024
 temp: .space 1024
 month: .asciiz "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Noc Dec "
 endline: .ascii "\r\n"
 .text
 _main:
-	li $a0, 13
-	li $a1, 12
+
+	li $a0, 29
+	li $a1, 3
 	li $a2, 2000
 	la $a3, TIME
 	jal _Date
+
+	li $a0, 28	
+	li $a1, 3
+	li $a2, 2001
+	la $a3, TIME1
+	jal _Date
+	la $a0, TIME
+	la $a1, TIME1
+	jal _GetTime
+	
 	la $a0, ($v0)
-	li $a1, 1
-	jal _Convert
-	la $a0, ($v0)
-	li $v0, 4
-	syscall
+ 	li $v0, 1
+ 	syscall
+	
 	li $v0, 10
 	syscall
+	
+_GetTime: # $a0: address of string TIME	$a1: address ò string TIME1		$V0: interger >= 0
+	addi $sp, $sp, -4 #save $ra
+	sw $ra, 0($sp)
+	
+ 	la $a0, ($a0) #$t0 = day, $t1 = month, $t2 = year
+ 	jal _Day
+ 	la $t0, ($v0)
+ 	jal _Month
+ 	la $t1, ($v0)
+ 	jal _Year
+ 	la $t2, ($v0)
+ 	
+ 	la $a0, ($a1) #$t3 = day1, $t4 = month1, $t5 = year1
+ 	jal _Day
+ 	la $t3, ($v0)
+ 	jal _Month
+ 	la $t4, ($v0)
+ 	jal _Year
+ 	la $t5, ($v0)
+ 	
+ 	sub $t6, $t5, $t2
+ 	slt $t7, $zero, $t6
+ 	bne $t7, $0, GetTime.skip #if (year1 <= year) return 0
+ 		add $v0, $zero, $zero
+ 		lw $ra, 0($sp)
+ 		addi $sp, $sp, 4
+		jr $ra
+ 	GetTime.skip: #means year1 > year
+ 		slt $t7, $t4, $t1
+ 		beq $t7, $0, GetTime.skip1 #if(month1 < month) return $t6 - 1
+ 			subi $v0, $t6, 1
+ 			lw $ra, 0($sp)
+			addi $sp, $sp, 4
+			jr $ra
+ 		GetTime.skip1:
+ 			slt $t7, $t1, $t4 # if(month > month1) return $t6
+ 			beq $t7, $0, GetTime.skip2
+ 				add $v0, $t6, $zero
+ 				lw $ra, 0($sp)
+				addi $sp, $sp, 4
+				jr $ra
+			GetTime.skip2: #means month = month1, year = year1
+				slt $t7, $t3, $t0
+				bne $t7, $0, GetTime.skip3 #if(day1 > day0) return $t6
+					add $v0, $t6, $zero
+ 					lw $ra, 0($sp)
+					addi $sp, $sp, 4
+					jr $ra
+				GetTime.skip3:
+					bne $t0, 29, GetTime.skip4 # if(day0 = 29 && day1 = 28, month = 2) return $t6
+					bne $t3, 28, GetTime.skip4
+ 					bne $t4, 2, GetTime.skip4
+ 						add $v0, $t6, $zero
+ 						lw $ra, 0($sp)
+						addi $sp, $sp, 4
+						jr $ra
+					GetTime.skip4:	#means day1 < day0 return $t6 - 1
+						sub $v0, $t6, 1
+ 						lw $ra, 0($sp)
+						addi $sp, $sp, 4
+						jr $ra 	
+
 	
 #Procedure to write a number into a string buffer
 _NumToString:	#Positive number only	$a0: num	$a1:buffer
@@ -114,7 +187,7 @@ _Convert: 	#a0: address of string TIME	#a1: type -> 0: MM/DD/YYYY	1: Month DD, Y
 	la $t0, mystring
 	la $t7, ($a0)
 Convert.copy: #copy from TIME to mystring
-	lb $t1, 0($t7)
+	lb $t1, 0($t7)	
 	sb $t1, 0($t0)
 	addi $t7, $t7, 1
 	addi $t0, $t0, 1
@@ -277,3 +350,5 @@ LeapYear.L1:
 	li $v0, 1
 LeapYear.L2:
 	jr $ra
+	
+
