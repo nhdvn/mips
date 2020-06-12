@@ -3,7 +3,9 @@ mystring: .space 1024
 TIME: .space 1024
 TIME1: .space 1024
 temp: .space 1024
-month: .asciiz "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Noc Dec "
+month: .asciiz "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec "
+day: .asciiz "Sun Mon Tues Wed Thurs Fri Sat "
+empty: .asciiz ""
 endline: .ascii "\r\n"
 .text
 _main:
@@ -19,6 +21,7 @@ _main:
 	li $a2, 2001
 	la $a3, TIME1
 	jal _Date
+
 	la $a0, TIME
 	la $a1, TIME1
 	jal _GetTime
@@ -27,10 +30,22 @@ _main:
  	li $v0, 1
  	syscall
 	
+	la $a0, endline
+	li $v0, 4
+	syscall
+	
+	la $a1, empty # clear string buffer to store new value
+	la $a0, TIME
+	jal _Weekday
+	
+	la $a0, ($v0)
+	li $v0, 4
+	syscall
+	
 	li $v0, 10
 	syscall
 	
-_GetTime: # $a0: address of string TIME	$a1: address ò string TIME1		$V0: interger >= 0
+_GetTime: # $a0: address of string TIME	$a1: address of string TIME1		$V0: interger >= 0
 	addi $sp, $sp, -4 #save $ra
 	sw $ra, 0($sp)
 	
@@ -368,4 +383,66 @@ LeapYear.L1:
 LeapYear.L2:
 	jr $ra
 	
+_Weekday: # a0 address of TIME
+	addi $sp, $sp, -4
+	sw $ra, ($sp)
+
+	la $a0, ($a0)
+	jal _Day
+ 	la $t0, ($v0)
+ 	jal _Month
+ 	la $t1, ($v0)
+ 	jal _Year
+ 	la $t2, ($v0)
+	addi $t9, $zero, 100
+	div $t2, $t9 
+	mfhi $t2 # last 2 digits of year
+	mflo $t3 # first 2 digits of year
+	beq $t2, $zero, Weekday.Keep
+	addi $t3, $t3, 1 # if year not end with 00 -> century + 1
+	Weekday.Keep:
+	add $t8, $zero, $zero
+	add $t8, $t8, $t0
+	add $t8, $t8, $t1
+	add $t8, $t8, $t2
+	add $t8, $t8, $t3
+	addi $t9, $zero, 4
+	div $t2, $t9
+	mflo $t4 # value of [y/4]
+	add $t8, $t8, $t4
+	addi $t9, $zero, 7
+	div $t8, $t9
+	mfhi $t8 # number represent day 
+	beq $t8, $zero, Weekday.Final
+	la $t9, ' '
+	la $t7, day
+	add $t6, $zero, $zero # count space char in string day
+	Weekday.Loop:
+		lb $t5, ($t7)
+		bne $t5, $t9, Weekday.Continue # not space char
+		addi $t6, $t6, 1 # next day, count by space char
+		Weekday.Continue:
+		addi $t7, $t7, 1 # next char
+		beq $t6, $t8, Weekday.EndLoop
+		j Weekday.Loop
+	Weekday.EndLoop:
+	la $t6, 0($a1) # store address to t6
+	Weekday.Final:
+		lb $t5, ($t7)
+		beq $t5, $t9, Weekday.Out
+		sb $t5, ($a1)
+		addi $a1, $a1, 1
+		addi $t7, $t7, 1
+		j Weekday.Final
+	Weekday.Out:
+	la $v0, 0($t6) # return address
+
+	lw $ra, ($sp)
+	addi $sp, $sp, 4
+	jr $ra
+
+
+
+
+
 
