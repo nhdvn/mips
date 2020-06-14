@@ -2,46 +2,146 @@
 mystring: .space 1024
 TIME: .space 1024
 TIME1: .space 1024
-temp: .space 1024
+return: .space 100
 month: .asciiz "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec "
 day: .asciiz "Sun Mon Tues Wed Thurs Fri Sat "
 empty: .asciiz ""
-endline: .ascii "\r\n"
+endline: .asciiz "\r\n"
+dayinput: .space 4
+monthinput: .space 4
+yearinput: .space 6
+reqday: .asciiz "Nhap ngay Day: "
+reqmonth: .asciiz "Nhap thang Month: "
+reqyear: .asciiz "Nhap nam Year: "
+inputwarning: .asciiz "Nhap ngay sai, vui long nhap lai\r\n"
+message: .asciiz "----------Ban hay chon 1 trong cac thao tac duoi day----------\r\n0. Thoat\r\n1. Xuat chuoi TIME theo dinh dang DD/MM/YYYY\r\n2. Chuyen doi chuoi TIME thanh mot trong cac dinh dang sau:\r\n\t0. MM/DD/YYYY\r\n\t1. Month DD, YYYY\r\n\t2. DD Month, YYYY\r\n3. Cho biet ngay vua nhap la ngay thu may trong tuan\r\n4. Kiem tra nam trong chuoi TIME co phai la nam nhuan khong\r\n5. Cho biet khoang thoi gian giua choi TIME_1 va TIME_2\r\n6. Cho biet 2 nam nhuan gan nhat voi nam trong chuoi TIME\r\n"
+optioninputmsg: .asciiz "\r\nLua chon: "
+optioninputwarning: .asciiz "\r\nLua chon khong ton tai, vui long nhap lai"
+resultmsg: .asciiz "\r\nKet qua: "
+option2inputmsg: .asciiz "\r\nLua chon (0, 1, 2): "
+isLeapYearMsg: .asciiz "la nam nhuan"
+notLeapYearMsg: .asciiz "khong la nam nhuan"
+
 .text
 _main:
-
-	li $a0, 29
-	li $a1, 2
-	li $a2, 2000
+	jal _InputDate
+	lw $a0, 0($v0)
+	lw $a1, 4($v0)
+	lw $a2, 8($v0)
 	la $a3, TIME
 	jal _Date
-
-	li $a0, 28
-	li $a1, 2
-	li $a2, 2001
-	la $a3, TIME1
-	jal _Date
-
-	la $a0, TIME
-	la $a1, TIME1
-	jal _GetTime
 	
-	la $a0, ($v0)
- 	li $v0, 1
- 	syscall
-	
-	la $a0, endline
-	li $v0, 4
+	la $a0, message
+	addi $v0, $zero, 4
 	syscall
-	
-	la $a1, empty # clear string buffer to store new value
-	la $a0, TIME
-	jal _Weekday
-	
-	la $a0, ($v0)
-	li $v0, 4
+main.OptionLoop:
+	la $a0, optioninputmsg
 	syscall
+	addi $v0, $zero, 12
+	syscall
+	add $t0, $zero, $v0
 	
+	addi $t1, $zero, 48
+	beq $t0, $t1, main.Stop
+	
+	addi $t1, $zero, 49
+	bne $t0, $t1, main.OutOpt1
+	#Option 1
+	la $a0, resultmsg
+	addi $v0, $zero, 4
+	syscall
+	la $a0, TIME
+	addi $v0, $zero, 4
+	syscall
+	j main.OptionLoop
+main.OutOpt1:
+	addi $t1, $zero, 50
+	bne $t0, $t1, main.OutOpt2
+	#Option 2
+	Option2.Input:
+	la $a0, option2inputmsg
+	addi $v0, $zero, 4
+	syscall
+	addi $v0, $zero, 12
+	syscall
+	add $t0, $zero, $v0
+	addi $t0, $t0, -48
+	slt $t1, $t0, $zero
+	bne $t1, $zero, Option2.L1
+	addi $t1, $zero, 2
+	slt $t1, $t1, $t0
+	bne $t1, $zero, Option2.L1
+	la $a0, resultmsg
+	addi $v0, $zero, 4
+	syscall
+	add $a1, $zero, $t0
+	la $a0, TIME
+	jal _Convert
+	la $a0, ($v0)
+	addi $v0, $zero, 4
+	syscall
+	j main.OptionLoop
+	Option2.L1:
+	la $a0, optioninputwarning
+	addi $v0, $zero, 4
+	syscall
+	j Option2.Input
+main.OutOpt2:
+	addi $t1, $zero, 51
+	bne $t0, $t1, main.OutOpt3
+	#Option 3
+	la $a0, resultmsg
+	addi $v0, $zero, 4
+	#process code below
+	
+	
+	syscall
+	j main.OptionLoop
+main.OutOpt3:
+	addi $t1, $zero, 52
+	bne $t0, $t1, main.OutOpt4
+	#Option 4
+	la $a0, resultmsg
+	addi $v0, $zero, 4
+	syscall
+	la $a0, TIME
+	jal _LeapYear
+	beq $v0, $zero, Option4.L1
+	la $a0, isLeapYearMsg
+	j Option4.L2
+	Option4.L1:
+	la $a0, notLeapYearMsg
+	Option4.L2:
+	addi $v0, $zero, 4
+	syscall
+	j main.OptionLoop
+main.OutOpt4:
+	addi $t1, $zero, 53
+	bne $t0, $t1, main.OutOpt5
+	#Option 5
+	la $a0, resultmsg
+	addi $v0, $zero, 4
+	syscall
+	#process code below
+	
+	
+	j main.OptionLoop
+main.OutOpt5:
+	addi $t1, $zero, 54
+	bne $t0, $t1, main.OutOpt6
+	#Option 6
+	la $a0, resultmsg
+	addi $v0, $zero, 4
+	syscall
+	#process code below
+	j main.OptionLoop
+main.OutOpt6:
+	la $a0, optioninputwarning
+	addi $v0, $zero, 4
+	syscall
+	j main.OptionLoop
+	
+main.Stop:	
 	li $v0, 10
 	syscall
 	
@@ -132,12 +232,30 @@ _NumToString:	#Unsigned number only	$a0: num	$a1:buffer
 			addi $t2, $t2, 48
 			sb $t2, 0($t3)
 			addi $t3, $t3, 1
-			beqz $t1, write.out
+			beq $t1, $zero, write.out
 			j write.loop
 		write.out:
 			sb $zero, 0($t3)
 			la $v0, ($a1)
 			jr $ra
+
+_StringToNum: #		$a0: address of string	$v0: number
+	addi $v0, $zero, 0
+	la $t2, ($a0)
+StringToNum.Loop:
+	lb $t0, 0($t2)
+	beq $t0, $zero, StringToNum.Out
+	addi $t7, $zero, 10
+	beq $t0, $t7, StringToNum.Out
+	addi $t2, $t2, 1
+	addi $t0, $t0, -48
+	addi $t1, $zero, 10
+	mult $v0, $t1
+	mflo $v0
+	add $v0, $v0, $t0
+	j StringToNum.Loop
+StringToNum.Out:
+	jr $ra
 
 #Procedure to print string TIME as dd/mm/yyyy
 _Date:	#$a0: day	$a1: month	$a2: year	$a3: TIME	$v0: address of the final string
@@ -337,50 +455,47 @@ _Day: #get day from string TIME			$a0: address of string TIME	$v0: value of day 
 	jr $ra
 	
 _Year: #get year from string TIME		$a0: address of string TIME	$v0: value of year
-	lb $t7, 6($a0)
-	addi $t7, $t7, -48
-	li $t8, 10
-	mult $t7, $t8
-	mflo $v0
-	lb $t7, 7($a0)
-	addi $t7, $t7, -48
-	add $v0, $v0, $t7
-	mult $v0, $t8
-	mflo $v0
-	lb $t7, 8($a0)
-	addi $t7, $t7, -48
-	add $v0, $v0, $t7
-	mult $v0, $t8
-	mflo $v0
-	lb $t7, 9($a0)
-	addi $t7, $t7, -48
-	add $v0, $v0, $t7
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $a0, 0($sp)
+	la $a0, 6($a0)
+	jal _StringToNum
+	lw $a0, 0($sp)
+	lw $ra, 4($sp)
+	addi $sp, $sp, 8
 	jr $ra
-
-_LeapYear: #	$a0: address of string TIME	$v0: 1 -> leap	0 -> not leap
-	addi $sp, $sp, -4
-	sw $ra, 0($sp)
-	jal _Year
-	lw $ra, 0($sp)
-	addi $sp, $sp, 4
-	add $t0, $v0, $zero
+	
+_IsLeapYear:	#	$a0: value of year	$v0: bool
 	li $v0, 0
 	li $t7, 4
-	div $t0, $t7
+	div $a0, $t7
 	mfhi $t1
-	bne $t1, $zero, LeapYear.L1
+	bne $t1, $zero, IsLeapYear.L1
 	li $t7, 100
-	div $t0, $t7
+	div $a0, $t7
 	mfhi $t1
-	beq $t1, $zero, LeapYear.L1
+	beq $t1, $zero, IsLeapYear.L1
 	li $v0, 1
-LeapYear.L1:
+IsLeapYear.L1:
 	li $t7, 400
-	div $t0, $t7
+	div $a0, $t7
 	mfhi $t1
-	bne $t1, $zero, LeapYear.L2
+	bne $t1, $zero, IsLeapYear.L2
 	li $v0, 1
-LeapYear.L2:
+IsLeapYear.L2:
+	jr $ra
+	
+
+_LeapYear: #	$a0: address of string TIME	$v0: 1 -> leap	0 -> not leap
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $a0, 0($sp)
+	jal _Year
+	add $a0, $zero, $v0
+	jal _IsLeapYear
+	lw $a0, 0($sp)
+	lw $ra, 4($sp)
+	addi $sp, $sp, 8
 	jr $ra
 	
 _Weekday: # a0 address of TIME
@@ -440,7 +555,215 @@ _Weekday: # a0 address of TIME
 	lw $ra, ($sp)
 	addi $sp, $sp, 4
 	jr $ra
+	
+_IsContainNonNumericCharacter:	#	$a0: string	$v0: bool
+	la $t0, ($a0)
+	addi $v0, $zero, 0
+ICNNC.Loop:
+	lb $t1, 0($t0)
+	beq $t1, $zero, ICNNC.Out
+	addi $t7, $zero, 10
+	beq $t1, $t7, ICNNC.Out
+	addi $t0, $t0, 1
+	addi $t2, $zero, 48
+	slt $t3, $t1, $t2
+	bne $t3, $zero, ICNNC.True
+	addi $t2, $zero, 57
+	slt $t3, $t2, $t1
+	bne $t3, $zero, ICNNC.True
+	j ICNNC.Loop
+ICNNC.True:
+	addi $v0, $zero, 1
+ICNNC.Out:
+	jr $ra
+	
 
+_CheckDateInput:	#	$a0: string day		$a1: string month	$a2: string year	$v0: bool
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	jal _IsContainNonNumericCharacter
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	bne $v0, $zero, CheckDateInput.False
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $a0, 0($sp)
+	la $a0, ($a1)
+	jal _IsContainNonNumericCharacter
+	lw $a0, 0($sp)
+	lw $ra, 4($sp)
+	addi $sp, $sp, 8
+	bne $v0, $zero, CheckDateInput.False
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $a0, 0($sp)
+	la $a0, ($a2)
+	jal _IsContainNonNumericCharacter
+	lw $a0, 0($sp)
+	lw $ra, 4($sp)
+	addi $sp, $sp, 8
+	bne $v0, $zero, CheckDateInput.False
+#Get number value of day month year
+	#day -> s0
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	jal _StringToNum
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	add $s0, $zero, $v0
+	#month -> s1
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $a0, 0($sp)
+	la $a0, ($a1)
+	jal _StringToNum
+	lw $ra, 4($sp)
+	lw $a0, 0($sp)
+	addi $sp, $sp, 8
+	add $s1, $zero, $v0
+	#year -> s2
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $a0, 0($sp)
+	la $a0, ($a2)
+	jal _StringToNum
+	lw $ra, 4($sp)
+	lw $a0, 0($sp)
+	addi $sp, $sp, 8
+	add $s2, $zero, $v0
+	
+	#check if year < 0
+	slt $t0, $s2, $zero
+	bne $t0, $zero, CheckDateInput.False
+	
+	addi $t0, $zero, 1
+	beq $s1, $t0, CheckDateInput.Case31
+	addi $t0, $zero, 3
+	beq $s1, $t0, CheckDateInput.Case31
+	addi $t0, $zero, 5
+	beq $s1, $t0, CheckDateInput.Case31
+	addi $t0, $zero, 7
+	beq $s1, $t0, CheckDateInput.Case31
+	addi $t0, $zero, 8
+	beq $s1, $t0, CheckDateInput.Case31
+	addi $t0, $zero, 10
+	beq $s1, $t0, CheckDateInput.Case31
+	addi $t0, $zero, 12
+	beq $s1, $t0, CheckDateInput.Case31
+	j CheckDateInput.CheckCase30
+CheckDateInput.Case31:
+	slt $t0, $zero, $s0
+	beq $t0, $zero, CheckDateInput.False
+	addi $t1, $zero, 31
+	slt $t0, $t1, $s0
+	bne $t0, $zero, CheckDateInput.False
+	j CheckDateInput.OutCase
+CheckDateInput.CheckCase30:
+	addi $t0, $zero, 4
+	beq $s1, $t0, CheckDateInput.Case30
+	addi $t0, $zero, 6
+	beq $s1, $t0, CheckDateInput.Case30
+	addi $t0, $zero, 9
+	beq $s1, $t0, CheckDateInput.Case30
+	addi $t0, $zero, 11
+	beq $s1, $t0, CheckDateInput.Case30
+	j CheckDateInput.CheckCase2
+CheckDateInput.Case30:
+	slt $t0, $zero, $s0
+	beq $t0, $zero, CheckDateInput.False
+	addi $t1, $zero, 30
+	slt $t0, $t1, $s0
+	bne $t0, $zero, CheckDateInput.False
+	j CheckDateInput.OutCase
+CheckDateInput.CheckCase2:
+	addi $t0, $zero, 2
+	beq $s1, $t0, CheckDateInput.Case2
+	j CheckDateInput.False
+CheckDateInput.Case2:
+	slt $t0, $zero, $s0
+	beq $t0, $zero, CheckDateInput.False
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $a0, 0($sp)
+	add $a0, $zero, $s2
+	jal _IsLeapYear
+	lw $ra, 4($sp)
+	lw $a0, 0($sp)
+	addi $sp, $sp, 8
+	beq $v0, $zero, Case2.28
+	addi $t1, $zero, 29
+	j Case2.2829
+	Case2.28:
+	addi $t1, $zero, 28
+	Case2.2829:
+	slt $t0, $t1, $s0
+	bne $t0, $zero, CheckDateInput.False
+CheckDateInput.OutCase:
+	addi $v0, $zero, 1
+	jr $ra
+CheckDateInput.False:
+	addi $v0, $zero, 0
+	jr $ra
+	
+_InputDate:	#	v0: address of an array contain 3 integer value of day, month, year
+InputDate.Loop:
+	la $a0, reqday
+	addi $v0, $zero, 4
+	syscall 
+	la $a0, dayinput
+	addi $a1, $zero, 4
+	addi $v0, $zero, 8
+	syscall
+	
+	la $a0, reqmonth
+	addi $v0, $zero, 4
+	syscall 
+	la $a0, monthinput
+	addi $a1, $zero, 4
+	addi $v0, $zero, 8
+	syscall
+	
+	la $a0, reqyear
+	addi $v0, $zero, 4
+	syscall 
+	la $a0, yearinput
+	addi $a1, $zero, 6
+	addi $v0, $zero, 8
+	syscall
+	
+	la $a0, dayinput
+	la $a1, monthinput
+	la $a2, yearinput
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	jal _CheckDateInput
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	bne $v0, $zero, InputDate.Outloop
+	la $a0, inputwarning
+	addi $v0, $zero, 4
+	syscall
+	j InputDate.Loop
+InputDate.Outloop:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	la $a0, dayinput
+	jal _StringToNum
+	la $t0, return
+	sw $v0, 0($t0)
+	la $a0, monthinput
+	jal _StringToNum
+	la $t0, return 
+	sw $v0, 4($t0)
+	la $a0, yearinput
+	jal _StringToNum
+	la $t0, return
+	sw $v0, 8($t0)
+	la $v0, return
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+	
 
 
 
