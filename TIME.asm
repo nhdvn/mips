@@ -3,10 +3,13 @@ mystring: .space 1024
 TIME: .space 1024
 TIME1: .space 1024
 return: .space 100
+monthcode: .word 0, 0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5
+centurycode: .word 4, 2, 0, 6
 month: .asciiz "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec "
 day: .asciiz "Sun Mon Tues Wed Thurs Fri Sat "
 empty: .asciiz ""
 andspace: .asciiz " va "
+weekdaystr: .space 10
 endline: .asciiz "\r\n"
 dayinput: .space 4
 monthinput: .space 4
@@ -96,8 +99,11 @@ main.OutOpt2:
 	addi $v0, $zero, 4
 	syscall
 	#process code below
-	
-	
+	la $a0, TIME
+	jal _Weekday
+	la $a0, ($v0)
+	addi $v0, $zero, 4
+	syscall
 	j main.OptionLoop
 main.OutOpt3:
 	addi $t1, $zero, 52
@@ -572,64 +578,100 @@ _LeapYear: #	$a0: address of string TIME	$v0: 1 -> leap	0 -> not leap
 	addi $sp, $sp, 8
 	jr $ra
 	
-_Weekday: # a0 address of TIME
+_Weekday: # a0 address of TIME # (Year Code + Month Code + Century Code + Day Number � Leap Year Code) mod 7
 	addi $sp, $sp, -4
 	sw $ra, ($sp)
+	la $a0, ($a0) # day number
+	add $s7, $zero, $zero # result of the formular
 
-	la $a0, ($a0)
 	jal _Day
  	la $t0, ($v0)
+	add $s7, $s7, $t0 # add day number
+
  	jal _Month
- 	la $t1, ($v0)
+ 	la $t1, ($v0) # month number
+	addi $t9, $zero, 4 
+	mult $t1, $t9
+	mflo $t1 # true index of the month code (bytes address)
+	la $t0, monthcode
+	add $t0, $t0, $t1 # move adress to true index t1
+	lw $t1, ($t0) # t1 = month code
+	add $s7, $s7, $t1 # add month code
+
  	jal _Year
  	la $t2, ($v0)
 	addi $t9, $zero, 100
 	div $t2, $t9 
 	mfhi $t2 # last 2 digits of year
 	mflo $t3 # first 2 digits of year
-	beq $t2, $zero, Weekday.Keep
-	addi $t3, $t3, 1 # if year not end with 00 -> century + 1
-	Weekday.Keep:
-	add $t8, $zero, $zero
-	add $t8, $t8, $t0
-	add $t8, $t8, $t1
-	add $t8, $t8, $t2
-	add $t8, $t8, $t3
+	add $s7, $s7, $t2 # add year code
+
 	addi $t9, $zero, 4
 	div $t2, $t9
 	mflo $t4 # value of [y/4]
-	add $t8, $t8, $t4
+	add $s7, $s7, $t4 # add [y/4] year code
+	
+	addi $t9, $zero, 17
+	sub $t3, $t3, $t9
+	addi $t9, $zero, 4
+	div $t3, $t9
+	mfhi $t3 # index of the century code
+	addi $t9, $zero, 4 
+	mult $t3, $t9
+	mflo $t3 # true index of the century code (bytes address)
+	la $t0, centurycode
+	add $t0, $t0, $t3 # move adress to true index t3
+	lw $t3, ($t0) # t3 = century code
+	add $s7, $s7, $t3 # add century code
+
+	jal _LeapYear
+	beq $v0, $zero, Weekday.Skip # if is not leap year
+	jal _Month
+ 	la $t1, ($v0) # month number
+	addi $t2, $zero 3
+	slt $t0, $t1, $t2
+	beq $t0, $zero, Weekday.Skip # if is not Jan or Feb
+	addi $s7, $s7, -1
+	Weekday.Skip:
+
 	addi $t9, $zero, 7
-	div $t8, $t9
-	mfhi $t8 # number represent day 
-	beq $t8, $zero, Weekday.Final
-	la $t9, ' '
+	div $s7, $t9
+	mfhi $s7 # number represent weekday 
+
 	la $t7, day
+	la $t9, ' '
+	beq $s7, $zero, Weekday.EndLoop
+
 	add $t6, $zero, $zero # count space char in string day
+
 	Weekday.Loop:
 		lb $t5, ($t7)
 		bne $t5, $t9, Weekday.Continue # not space char
 		addi $t6, $t6, 1 # next day, count by space char
 		Weekday.Continue:
 		addi $t7, $t7, 1 # next char
-		beq $t6, $t8, Weekday.EndLoop
+		beq $t6, $s7, Weekday.EndLoop
 		j Weekday.Loop
 	Weekday.EndLoop:
-	la $t6, 0($a1) # store address to t6
+
+	la $t6, weekdaystr # store address to t6
+
 	Weekday.Final:
 		lb $t5, ($t7)
 		beq $t5, $t9, Weekday.Out
-		sb $t5, ($a1)
-		addi $a1, $a1, 1
+		sb $t5, ($t6)
+		addi $t6, $t6, 1
 		addi $t7, $t7, 1
 		j Weekday.Final
 	Weekday.Out:
-	la $v0, 0($t6) # return address
 
+	la $v0, weekdaystr # return address
 	lw $ra, ($sp)
 	addi $sp, $sp, 4
 	jr $ra
 	
+
+
 _IsContainNonNumericCharacter:	#	$a0: string	$v0: bool
 	la $t0, ($a0)
 	addi $v0, $zero, 0
