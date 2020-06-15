@@ -127,7 +127,7 @@ main.OutOpt4:
 	addi $t1, $zero, 53
 	bne $t0, $t1, main.OutOpt5
 	#Option 5
-	la $a0, resultmsg
+	la $a0, endline
 	addi $v0, $zero, 4
 	syscall
 	#process code below
@@ -141,8 +141,14 @@ main.OutOpt4:
 	la $a0, TIME
 	la $a1, TIME1
 	jal _GetTime
+
+	add $t0, $zero, $v0
 	
-	add $a0, $zero, $v0
+	la $a0, resultmsg
+	addi $v0, $zero, 4
+	syscall
+	
+	add $a0, $zero, $t0
 	addi $v0, $zero, 1
 	syscall
 	
