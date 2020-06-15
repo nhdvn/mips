@@ -92,10 +92,10 @@ main.OutOpt2:
 	#Option 3
 	la $a0, resultmsg
 	addi $v0, $zero, 4
+	syscall
 	#process code below
 	
 	
-	syscall
 	j main.OptionLoop
 main.OutOpt3:
 	addi $t1, $zero, 52
