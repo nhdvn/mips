@@ -6,6 +6,7 @@ return: .space 100
 month: .asciiz "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec "
 day: .asciiz "Sun Mon Tues Wed Thurs Fri Sat "
 empty: .asciiz ""
+andspace: .asciiz " va "
 endline: .asciiz "\r\n"
 dayinput: .space 4
 monthinput: .space 4
@@ -36,6 +37,7 @@ _main:
 	syscall
 main.OptionLoop:
 	la $a0, optioninputmsg
+	addi $v0, $zero, 4
 	syscall
 	addi $v0, $zero, 12
 	syscall
@@ -123,7 +125,20 @@ main.OutOpt4:
 	addi $v0, $zero, 4
 	syscall
 	#process code below
+	jal _InputDate
+	lw $a0, 0($v0)
+	lw $a1, 4($v0)
+	lw $a2, 8($v0)
+	la $a3, TIME1
+	jal _Date
 	
+	la $a0, TIME
+	la $a1, TIME1
+	jal _GetTime
+	
+	add $a0, $zero, $v0
+	addi $v0, $zero, 1
+	syscall
 	
 	j main.OptionLoop
 main.OutOpt5:
@@ -133,7 +148,23 @@ main.OutOpt5:
 	la $a0, resultmsg
 	addi $v0, $zero, 4
 	syscall
+	
 	#process code below
+	la $a0, TIME
+	jal _NearLeapYear
+	
+	add $a0, $zero $v0
+	addi $v0, $zero, 1
+	syscall
+	
+	la $a0, andspace
+	addi $v0, $zero, 4
+	syscall
+	
+	add $a0, $zero $v1
+	addi $v0, $zero, 1
+	syscall
+	
 	j main.OptionLoop
 main.OutOpt6:
 	la $a0, optioninputwarning
@@ -145,66 +176,109 @@ main.Stop:
 	li $v0, 10
 	syscall
 	
-_GetTime: # $a0: address of string TIME	$a1: address of string TIME1		$V0: interger >= 0
-	addi $sp, $sp, -4 #save $ra
-	sw $ra, 0($sp)
+_NearLeapYear: #a0: address of string TIME		#v0: integer (year)		#v1: integer (year)
+	addi $sp, $sp, -12 #save $ra
+	sw $ra, 8($sp)
 	
+	jal _Year
+ 	add $t0, $zero, $v0 #t0 = year
+	add $t3, $zero, $v0 #t0 = year
+	
+	add $t2, $zero, $zero #t1 is used in IsLeapYear
+	NearLeapYear.Loop:
+	bne $t2, $zero, NearLeapYear.OutLoop
+		addi $t0, $t0, 1
+		add $a0, $zero, $t0
+		jal _IsLeapYear
+		beq $v0, 1, NearLeapYear.OutLoop
+		j NearLeapYear.Loop
+	NearLeapYear.OutLoop:
+		sw $a0, 4($sp)
+	add $t0, $zero, $t3 	
+	NearLeapYear.Loop1:
+	bne $t2,$zero,NearLeapYear.OutLoop1
+		addi $t0, $t0, -1
+		add $a0, $zero, $t0
+		jal _IsLeapYear
+		beq $v0, 1, NearLeapYear.OutLoop1
+		j NearLeapYear.Loop1
+	NearLeapYear.OutLoop1:
+		sw $a0, 0($sp)
+	
+	lw $v0, 0($sp)
+	lw $v1, 4($sp)
+		
+	lw $ra, 8($sp)
+	addi $sp, $sp, 12
+	jr $ra
+
+_GetTime: # $a0: address of string TIME	$a1: address of string TIME1		$V0: integer >= 0
+	addi $sp, $sp, -28 #save $ra
+	sw $ra, 24($sp)
+
  	la $a0, ($a0) #$t0 = day, $t1 = month, $t2 = year
  	jal _Day
- 	la $t0, ($v0)
+ 	sw $v0, 20($sp) #t0
  	jal _Month
- 	la $t1, ($v0)
+ 	sw $v0, 16($sp) #t1
  	jal _Year
- 	la $t2, ($v0)
+ 	sw $v0, 12($sp) #t2
  	
  	la $a0, ($a1) #$t3 = day1, $t4 = month1, $t5 = year1
  	jal _Day
- 	la $t3, ($v0)
+ 	sw $v0, 8($sp) #t3
  	jal _Month
- 	la $t4, ($v0)
+ 	sw $v0, 4($sp) #t4
  	jal _Year
- 	la $t5, ($v0)
+ 	sw $v0, 0($sp) #t5
+ 	
+ 	lw $t5,  0($sp)
+ 	lw $t4,  4($sp)
+ 	lw $t3,  8($sp)
+ 	lw $t2,  12($sp)
+ 	lw $t1,  16($sp)
+ 	lw $t0,  20($sp)
  	
  	sub $t6, $t5, $t2
  	slt $t7, $zero, $t6
  	bne $t7, $0, GetTime.skip #if (year1 <= year) return 0
  		add $v0, $zero, $zero
- 		lw $ra, 0($sp)
- 		addi $sp, $sp, 4
+ 		lw $ra, 24($sp)
+ 		addi $sp, $sp, 28
 		jr $ra
  	GetTime.skip: #means year1 > year
  		slt $t7, $t4, $t1
  		beq $t7, $0, GetTime.skip1 #if(month1 < month) return $t6 - 1
  			subi $v0, $t6, 1
- 			lw $ra, 0($sp)
-			addi $sp, $sp, 4
+ 			lw $ra, 24($sp)
+			addi $sp, $sp, 28
 			jr $ra
  		GetTime.skip1:
  			slt $t7, $t1, $t4 # if(month > month1) return $t6
  			beq $t7, $0, GetTime.skip2
  				add $v0, $t6, $zero
- 				lw $ra, 0($sp)
-				addi $sp, $sp, 4
+ 				lw $ra, 24($sp)
+				addi $sp, $sp, 28
 				jr $ra
 			GetTime.skip2: #means month = month1, year = year1
 				slt $t7, $t3, $t0
 				bne $t7, $0, GetTime.skip3 #if(day1 > day0) return $t6
 					add $v0, $t6, $zero
- 					lw $ra, 0($sp)
-					addi $sp, $sp, 4
+ 					lw $ra, 24($sp)
+					addi $sp, $sp, 28
 					jr $ra
 				GetTime.skip3:
 					bne $t0, 29, GetTime.skip4 # if(day0 = 29 && day1 = 28, month = 2) return $t6
 					bne $t3, 28, GetTime.skip4
  					bne $t4, 2, GetTime.skip4
  						add $v0, $t6, $zero
- 						lw $ra, 0($sp)
-						addi $sp, $sp, 4
+ 						lw $ra, 24($sp)
+						addi $sp, $sp, 28
 						jr $ra
 					GetTime.skip4:	#means day1 < day0 return $t6 - 1
 						sub $v0, $t6, 1
- 						lw $ra, 0($sp)
-						addi $sp, $sp, 4
+ 						lw $ra, 24($sp)
+						addi $sp, $sp, 28
 						jr $ra 	
 
 	
