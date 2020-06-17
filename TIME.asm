@@ -98,7 +98,6 @@ main.OutOpt2:
 	la $a0, resultmsg
 	addi $v0, $zero, 4
 	syscall
-	#process code below
 	la $a0, TIME
 	jal _Weekday
 	la $a0, ($v0)
@@ -130,7 +129,6 @@ main.OutOpt4:
 	la $a0, endline
 	addi $v0, $zero, 4
 	syscall
-	#process code below
 	jal _InputDate
 	lw $a0, 0($v0)
 	lw $a1, 4($v0)
@@ -161,7 +159,6 @@ main.OutOpt5:
 	addi $v0, $zero, 4
 	syscall
 	
-	#process code below
 	la $a0, TIME
 	jal _NearLeapYear
 	
@@ -325,14 +322,15 @@ _NumToString:	#Unsigned number only	$a0: num	$a1:buffer
 			la $v0, ($a1)
 			jr $ra
 
+#Convert a string number to number
 _StringToNum: #		$a0: address of string	$v0: number
 	addi $v0, $zero, 0
 	la $t2, ($a0)
 StringToNum.Loop:
 	lb $t0, 0($t2)
-	beq $t0, $zero, StringToNum.Out
+	beq $t0, $zero, StringToNum.Out #if read '\0' then out loop
 	addi $t7, $zero, 10
-	beq $t0, $t7, StringToNum.Out
+	beq $t0, $t7, StringToNum.Out #if read '\n' then out loop
 	addi $t2, $t2, 1
 	addi $t0, $t0, -48
 	addi $t1, $zero, 10
@@ -345,11 +343,11 @@ StringToNum.Out:
 
 #Procedure to print string TIME as dd/mm/yyyy
 _Date:	#$a0: day	$a1: month	$a2: year	$a3: TIME	$v0: address of the final string
-	li $t0, 10			#10
-	la $s0, ($a3)	
+	addi $t0, $zero, 10			#10
+	la $s0, ($a3)			#store address of string
 	slt $t1, $a0, $t0 		#if day < 10 then write '0' to buffer
 	beq $t1, $zero, Date.L1
-	li $t2, 48			#character '0'
+	addi $t2, $zero, 48			#character '0'
 	sb $t2, 0($s0)
 	addi $s0, $s0, 1
 	
@@ -362,13 +360,13 @@ Date.L1:				#call _NumToString to write day to buffer
 	lw $a1, 0($sp)
 	lw $ra, 4($sp)
 	addi $sp, $sp, 8
-	li $t3, 47			#write '/'
+	addi $t3, $zero, 47			#write '/'
 	sb $t3, 2($a3)
 	la $s0, 3($a3)
-	li $t0, 10			#if month < 10 then write '0' to buffer
+	addi $t0, $zero, 10			#if month < 10 then write '0' to buffer
 	slt $t1, $a1, $t0
 	beq $t1, $zero, Date.L2
-	li $t2, 48
+	addi $t2, $zero, 48
 	sb $t2, 0($s0)
 	addi $s0, $s0, 1
 	
@@ -384,21 +382,21 @@ Date.L2:				#call _NumToString to write day to buffer
 	lw $a1, 4($sp)
 	lw $ra, 8($sp)
 	addi $sp, $sp, 12
-	li $t3, 47			#write '/'
+	addi $t3, $zero , 47			#write '/'
 	sb $t3, 5($a3)
 	la $s0, 6($a3)
-	li $t0, 1000
-	li $t2, 48
+	addi $t0, $zero, 1000		#if year < 1000 then write 0
+	addi $t2, $zero, 48
 	slt $t1, $a2, $t0
 	beq $t1, $zero, Date.L3
 	sb $t2, 0($s0)
 	addi $s0, $s0, 1
-	li $t0, 100
+	addi $t0, $zero, 100		#if year < 100 then write 0
 	slt $t1, $a2, $t0
 	beq $t1, $zero, Date.L3
 	sb $t2, 0($s0)
 	addi $s0, $s0, 1
-	li $t0, 10
+	addi $t0, $zero, 10		#if year < 10 then write 0
 	slt $t1, $a2, $t0
 	beq $t1, $zero, Date.L3
 	sb $t2, 0($s0)
@@ -418,11 +416,11 @@ Date.L3:
 	la $v0, ($a3)
 	jr $ra
 
-#Procedure Convert
+#Procedure Convert Date from DD/MM/YYYY to a specific type
 _Convert: 	#a0: address of string TIME	#a1: type -> 0: MM/DD/YYYY	1: Month DD, YYYY	2: DD Month, YYYY	#v0: address of final string
-	la $t0, mystring
-	la $t7, ($a0)
-Convert.copy: #copy from TIME to mystring
+	la $t0, mystring	#load buffer to write
+	la $t7, ($a0)		#store address of string TIME
+Convert.copy: #copy from TIME to buffer
 	lb $t1, 0($t7)	
 	sb $t1, 0($t0)
 	addi $t7, $t7, 1
@@ -431,7 +429,7 @@ Convert.copy: #copy from TIME to mystring
 	j Convert.copy
 Convert.outcopy:	
 	la $t0, mystring
-Convert.case0:
+Convert.case0:		#type 0
 	bne $a1, $zero, Convert.case1
 	lb $t1, 0($a0)
 	sb $t1, 3($t0)
@@ -442,12 +440,12 @@ Convert.case0:
 	lb $t1, 4($a0)
 	sb $t1, 1($t0)
 	j Convert.out
-Convert.case1:
-	li $t1, 1
+Convert.case1:		#type 1
+	addi $t1, $zero, 1
 	bne $a1, $t1, Convert.case2
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
-	jal _Month
+	jal _Month	#call to get value of month
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	addi $sp, $sp, -12
@@ -456,7 +454,7 @@ Convert.case1:
 	sw $a0, 0($sp)
 	la $a1, ($t0)
 	add $a0, $v0, $zero
-	jal _WriteMonthToString
+	jal _WriteMonthToString #call to write string value of month
 	lw $a0, 0($sp)
 	lw $a1, 4($sp)
 	lw $ra, 8($sp)
@@ -466,14 +464,14 @@ Convert.case1:
 	lb $t1, 1($a0)
 	sb $t1, 5($t0)
 	j Convert.outcase
-Convert.case2:
-	li $t1, 2
+Convert.case2:	#type 2
+	addi $t1, $zero, 2
 	bne $a1, $t1, Convert.out
-	li $t1, ' '
+	addi $t1, $zero, 32 	#character ' '
 	sb $t1, 2($t0)
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
-	jal _Month
+	jal _Month	#call to get value of month
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	addi $sp, $sp, -12
@@ -482,16 +480,15 @@ Convert.case2:
 	sw $a0, 0($sp)
 	la $a1, 3($t0)
 	add $a0, $v0, $zero
-	jal _WriteMonthToString
+	jal _WriteMonthToString	#call to write string value of month
 	lw $ra, 8($sp)
 	lw $a1, 4($sp)
 	lw $a0, 0($sp)
 	addi $sp, $sp, 12
-	j Convert.outcase
 Convert.outcase:
-	li $t1, ','
+	addi $t1, $zero, 44
 	sb $t1, 6($t0)
-	li $t1, ' '
+	addi $t1, $zero, 32
 	sb $t1, 7($t0)
 	lh $t1, 6($a0)
 	sh $t1, 8($t0)
@@ -501,12 +498,13 @@ Convert.out:
 	la $v0, ($t0)
 	jr $ra
 
+#write string value of month to a buffer
 _WriteMonthToString: #	$a0: value of month 1-12	$a1: buffer to write to		$v0: address of final string
 	sll $t7, $a0, 2
 	addi $t7, $t7, -4
-	la $t8, month
-	add $t8, $t8, $t7
-	lb $t9, 0($t8)
+	la $t8, month	#load the address of string containing 12 values of month
+	add $t8, $t8, $t7	#position to read
+	lb $t9, 0($t8)		#read 4 bytes then store to buffer
 	sb $t9, 0($a1)
 	lb $t9, 1($t8)
 	sb $t9, 1($a1)
@@ -551,34 +549,35 @@ _Year: #get year from string TIME		$a0: address of string TIME	$v0: value of yea
 	addi $sp, $sp, 8
 	jr $ra
 	
-_IsLeapYear:	#	$a0: value of year	$v0: bool
-	li $v0, 0
-	li $t7, 4
+#Check if leap year
+_IsLeapYear:	#	$a0: interger value of year	$v0: bool	1 -> leap	0 -> not leap
+	addi $v0, $zero, 0
+	addi $t7, $zero, 4
 	div $a0, $t7
 	mfhi $t1
 	bne $t1, $zero, IsLeapYear.L1
-	li $t7, 100
+	addi $t7, $zero, 100
 	div $a0, $t7
 	mfhi $t1
 	beq $t1, $zero, IsLeapYear.L1
-	li $v0, 1
+	addi $v0, $zero, 1
 IsLeapYear.L1:
-	li $t7, 400
+	addi $t7, $zero, 400
 	div $a0, $t7
 	mfhi $t1
 	bne $t1, $zero, IsLeapYear.L2
-	li $v0, 1
+	addi $v0, $zero, 1
 IsLeapYear.L2:
 	jr $ra
 	
-
+#Check if string TIME is leap year
 _LeapYear: #	$a0: address of string TIME	$v0: 1 -> leap	0 -> not leap
 	addi $sp, $sp, -8
 	sw $ra, 4($sp)
 	sw $a0, 0($sp)
-	jal _Year
+	jal _Year	#get value of year
 	add $a0, $zero, $v0
-	jal _IsLeapYear
+	jal _IsLeapYear	#call to check leap year
 	lw $a0, 0($sp)
 	lw $ra, 4($sp)
 	addi $sp, $sp, 8
@@ -677,20 +676,20 @@ _Weekday: # a0 address of TIME # (Year Code + Month Code + Century Code + Day Nu
 	jr $ra
 	
 
-
+#check if a string contains non numeric character
 _IsContainNonNumericCharacter:	#	$a0: string	$v0: bool
 	la $t0, ($a0)
 	addi $v0, $zero, 0
 ICNNC.Loop:
 	lb $t1, 0($t0)
-	beq $t1, $zero, ICNNC.Out
+	beq $t1, $zero, ICNNC.Out	#if read '\0' then return
 	addi $t7, $zero, 10
-	beq $t1, $t7, ICNNC.Out
+	beq $t1, $t7, ICNNC.Out		#if read '\n' then return
 	addi $t0, $t0, 1
-	addi $t2, $zero, 48
+	addi $t2, $zero, 48		#if < 48 then return true
 	slt $t3, $t1, $t2
 	bne $t3, $zero, ICNNC.True
-	addi $t2, $zero, 57
+	addi $t2, $zero, 57		#if > 57 then return true
 	slt $t3, $t2, $t1
 	bne $t3, $zero, ICNNC.True
 	j ICNNC.Loop
@@ -699,10 +698,10 @@ ICNNC.True:
 ICNNC.Out:
 	jr $ra
 	
-
+#check if a date is valid
 _CheckDateInput:	#	$a0: string day		$a1: string month	$a2: string year	$v0: bool
 	addi $sp, $sp, -4
-	sw $ra, 0($sp)
+	sw $ra, 0($sp)		#check if each string contain non numeric character, if true then return false
 	jal _IsContainNonNumericCharacter
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
@@ -725,7 +724,7 @@ _CheckDateInput:	#	$a0: string day		$a1: string month	$a2: string year	$v0: bool
 	lw $ra, 4($sp)
 	addi $sp, $sp, 8
 	bne $v0, $zero, CheckDateInput.False
-#Get number value of day month year
+	#Get number value of day month year
 	#day -> s0
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
@@ -757,7 +756,7 @@ _CheckDateInput:	#	$a0: string day		$a1: string month	$a2: string year	$v0: bool
 	#check if year < 0
 	slt $t0, $s2, $zero
 	bne $t0, $zero, CheckDateInput.False
-	
+	#check case 31 days
 	addi $t0, $zero, 1
 	beq $s1, $t0, CheckDateInput.Case31
 	addi $t0, $zero, 3
@@ -773,14 +772,14 @@ _CheckDateInput:	#	$a0: string day		$a1: string month	$a2: string year	$v0: bool
 	addi $t0, $zero, 12
 	beq $s1, $t0, CheckDateInput.Case31
 	j CheckDateInput.CheckCase30
-CheckDateInput.Case31:
-	slt $t0, $zero, $s0
+CheckDateInput.Case31: #process case 31 days
+	slt $t0, $zero, $s0	#if day < 0 then false
 	beq $t0, $zero, CheckDateInput.False
 	addi $t1, $zero, 31
-	slt $t0, $t1, $s0
+	slt $t0, $t1, $s0	#if day > 31 then false
 	bne $t0, $zero, CheckDateInput.False
 	j CheckDateInput.OutCase
-CheckDateInput.CheckCase30:
+CheckDateInput.CheckCase30:	#check case 30 days
 	addi $t0, $zero, 4
 	beq $s1, $t0, CheckDateInput.Case30
 	addi $t0, $zero, 6
@@ -790,35 +789,35 @@ CheckDateInput.CheckCase30:
 	addi $t0, $zero, 11
 	beq $s1, $t0, CheckDateInput.Case30
 	j CheckDateInput.CheckCase2
-CheckDateInput.Case30:
-	slt $t0, $zero, $s0
+CheckDateInput.Case30:	#process case 30 days
+	slt $t0, $zero, $s0	#if day < 0 then false
 	beq $t0, $zero, CheckDateInput.False
 	addi $t1, $zero, 30
-	slt $t0, $t1, $s0
+	slt $t0, $t1, $s0	#if day > 30 then false
 	bne $t0, $zero, CheckDateInput.False
 	j CheckDateInput.OutCase
-CheckDateInput.CheckCase2:
+CheckDateInput.CheckCase2:	#check case February
 	addi $t0, $zero, 2
 	beq $s1, $t0, CheckDateInput.Case2
 	j CheckDateInput.False
-CheckDateInput.Case2:
+CheckDateInput.Case2:	#process case February
 	slt $t0, $zero, $s0
 	beq $t0, $zero, CheckDateInput.False
 	addi $sp, $sp, -8
 	sw $ra, 4($sp)
 	sw $a0, 0($sp)
 	add $a0, $zero, $s2
-	jal _IsLeapYear
+	jal _IsLeapYear	#check if leap year
 	lw $ra, 4($sp)
 	lw $a0, 0($sp)
 	addi $sp, $sp, 8
-	beq $v0, $zero, Case2.28
-	addi $t1, $zero, 29
+	beq $v0, $zero, Case2.28	#if leap year then set max value of day to 28
+	addi $t1, $zero, 29		#set max value of day to 29
 	j Case2.2829
 	Case2.28:
 	addi $t1, $zero, 28
 	Case2.2829:
-	slt $t0, $t1, $s0
+	slt $t0, $t1, $s0	#if day > max then false
 	bne $t0, $zero, CheckDateInput.False
 CheckDateInput.OutCase:
 	addi $v0, $zero, 1
@@ -827,8 +826,10 @@ CheckDateInput.False:
 	addi $v0, $zero, 0
 	jr $ra
 	
+#Input date	
 _InputDate:	#	v0: address of an array contain 3 integer value of day, month, year
 InputDate.Loop:
+	#input as string
 	la $a0, reqday
 	addi $v0, $zero, 4
 	syscall 
@@ -858,10 +859,10 @@ InputDate.Loop:
 	la $a2, yearinput
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
-	jal _CheckDateInput
+	jal _CheckDateInput	#check if date is valid
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
-	bne $v0, $zero, InputDate.Outloop
+	bne $v0, $zero, InputDate.Outloop	#if valid then continue else retry
 	la $a0, inputwarning
 	addi $v0, $zero, 4
 	syscall
@@ -870,16 +871,16 @@ InputDate.Outloop:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	la $a0, dayinput
-	jal _StringToNum
+	jal _StringToNum	#get interger value of day
 	la $t0, return
 	sw $v0, 0($t0)
-	la $a0, monthinput
+	la $a0, monthinput	#get interger value of month
 	jal _StringToNum
 	la $t0, return 
 	sw $v0, 4($t0)
 	la $a0, yearinput
-	jal _StringToNum
-	la $t0, return
+	jal _StringToNum	#get interger value of year
+	la $t0, return		#store 3 values to a buffer
 	sw $v0, 8($t0)
 	la $v0, return
 	lw $ra, 0($sp)
