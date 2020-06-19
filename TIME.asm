@@ -191,8 +191,52 @@ _NearLeapYear: #a0: address of string TIME		#v0: integer (year)		#v1: integer (y
 	
 	jal _Year
  	add $t0, $zero, $v0 #t0 = year
-	add $t3, $zero, $v0 #t0 = year
-	
+ 	add $t3, $zero, $v0 #t0 = year
+ 	
+ 	addi $t4, $t0, 3 # check 1897
+ 	addi $t5, $zero, 4
+ 	div $t4, $t5
+ 	mfhi $t4
+ 	bne  $t4, 0, NearLeapYear.Out1897
+ 	addi $t4, $t0, 3 
+ 	addi $t5, $zero, 100 
+ 	div $t4, $t5
+ 	mfhi $t4
+ 	bne  $t4, 0, NearLeapYear.Out1897
+ 	addi $t4, $t0, 3 
+ 	addi $t5, $zero, 400 
+ 	div $t4, $t5
+ 	mfhi $t4
+ 	beq  $t4, 0, NearLeapYear.Out1897
+ 		addi $v0, $t0, -5
+ 		addi $v1, $t0, -1
+ 		
+ 		lw $ra, 8($sp)
+		addi $sp, $sp, 12
+		jr $ra
+ 	NearLeapYear.Out1897:
+ 	addi $t4, $t0, -3 # check 1897
+ 	addi $t5, $zero, 4
+ 	div $t4, $t5
+ 	mfhi $t4
+ 	bne  $t4, 0, NearLeapYear.Out1903
+ 	addi $t4, $t0, -3
+ 	addi $t5, $zero, 100
+ 	div $t4, $t5
+ 	mfhi $t4
+ 	bne  $t4, 0, NearLeapYear.Out1903
+ 	addi $t4, $t0, -3
+ 	addi $t5, $zero, 400
+ 	div $t4, $t5
+ 	mfhi $t4
+ 	beq  $t4, 0, NearLeapYear.Out1903
+ 		addi $v0, $t0, 1
+ 		addi $v1, $t0, 5
+ 		
+ 		lw $ra, 8($sp)
+		addi $sp, $sp, 12
+		jr $ra
+	NearLeapYear.Out1903:
 	add $t2, $zero, $zero #t1 is used in IsLeapYear
 	NearLeapYear.Loop:
 	bne $t2, $zero, NearLeapYear.OutLoop
@@ -583,7 +627,7 @@ _LeapYear: #	$a0: address of string TIME	$v0: 1 -> leap	0 -> not leap
 	addi $sp, $sp, 8
 	jr $ra
 	
-_Weekday: # a0 address of TIME # (Year Code + Month Code + Century Code + Day Number � Leap Year Code) mod 7
+_Weekday: # a0 address of TIME # (Year Code + Month Code + Century Code + Day Number ï¿½ Leap Year Code) mod 7
 	addi $sp, $sp, -4
 	sw $ra, ($sp)
 	la $a0, ($a0) # day number
