@@ -293,12 +293,30 @@ _GetTime: # $a0: address of string TIME	$a1: address of string TIME1		$V0: integ
  	lw $t0,  20($sp)
  	
  	sub $t6, $t5, $t2
- 	slt $t7, $zero, $t6
- 	bne $t7, $0, GetTime.skip #if (year1 <= year) return 0
+ 	
+ 	bne $t6, $t0, GetTime.continue
  		add $v0, $zero, $zero
  		lw $ra, 24($sp)
- 		addi $sp, $sp, 28
+		addi $sp, $sp, 28
 		jr $ra
+ 	
+ 	GetTime.continue:
+ 	slt $t7, $zero, $t6
+ 	bne $t7, $0, GetTime.skip #if (year1 < year) swap TIME1, TIME2
+ 		
+ 		add $t8, $zero, $t0 #swap t0, t3
+ 		add $t0, $zero, $t3,
+ 		add $t3, $zero, $t8
+ 		
+ 		add $t8, $zero, $t1 #swap t1, t4
+ 		add $t1, $zero, $t4,
+ 		add $t4, $zero, $t8
+ 		
+ 		add $t8, $zero, $t2 #swap t2, t5
+ 		add $t2, $zero, $t5,
+ 		add $t5, $zero, $t8
+
+		sub $t6, $t5, $t2
  	GetTime.skip: #means year1 > year
  		slt $t7, $t4, $t1
  		beq $t7, $0, GetTime.skip1 #if(month1 < month) return $t6 - 1
